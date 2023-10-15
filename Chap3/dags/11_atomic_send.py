@@ -59,8 +59,9 @@ def _send_stats(email, **context):
 send_stats      = PythonOperator(
     task_id             = "send_stats",
     python_callable     = _send_stats,
-    op_kwargs           = {"email": "webarebearwbb@gmail.com"}
-    templates_dict      = {"stats_path": "/data/stats/{{ds}}.csv"}
+    op_kwargs           = {"email": "webarebearwbb@gmail.com"},
+    templates_dict      = {"stats_path": "/data/stats/{{ds}}.csv"},
     dag = dag,
 )
+
 fetch_events >> calculate_stats >> send_stats
