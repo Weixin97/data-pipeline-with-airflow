@@ -1,3 +1,4 @@
+
 import datetime as dt 
 import pandas as pd
 
@@ -10,22 +11,26 @@ dag = DAG(
     dag_id              = "01_unscheduled",
     start_date          = dt.datetime(2023, 10, 14),
     end_date            = dt.datetime(2023, 10, 15),
-    schedule_interval   = "@daily",
+    schedule_interval   = dt.timedelta(days=3), # run DAG every three days
 )
 
 fetch_events = BashOperator(
     task_id             = "fetch_events",
     bash_command        = (
         "mkdir -p /data && "
-        "curl -o /data/events.json "
-        "http://localhost:5000/events"
+        "curl -o /data/events/{{ds}}.json " # partition file name
+        "http://localhost:5000/events?"
+        "start_date={{ds}}" # using ds short hand notation YYYY-MM-DD
+        "&end_date={{next_ds}}" # next_execution_date holds the execution date of the next interval
     ),
     dag = dag
 )
 
-def _calculate_stats(input_path, output_path):
+def _calculate_stats(**context): # take the dict input
     """Calculates event statistics."""
-    Path(output_path).parent.mkdir(exist_ok=True)
+    input_path          = context["templates_dict"]["input_path"] #(2) Retrieve the templated values from the templates_dict object
+    output_path         = context["templates_dict"]["output_path"]
+    Path(output_path).parent.mkdir(exit_ok=True)
 
     events              = pd.read_json(input_path)
     stats               = events.groupby(["date", "user"])\
@@ -35,8 +40,9 @@ def _calculate_stats(input_path, output_path):
 calculate_stats = PythonOperator(
     task_id             = "calculate_stats",
     python_callable     = _calculate_stats,
-    op_kwargs           = {"input_path" : "/data/events.json",
-                           "output_path": "/data/stats.csv"},
+    templates_dict      = {
+        "input_path" : "/data/events/{{ds}}.json", #(3) Pass the values that we want to be templated.
+        "output_path": "/data/stats/{{ds}}.csv"},
     dag = dag,
 )
 

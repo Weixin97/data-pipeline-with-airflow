@@ -1,3 +1,4 @@
+
 import datetime as dt 
 import pandas as pd
 
@@ -10,7 +11,7 @@ dag = DAG(
     dag_id              = "01_unscheduled",
     start_date          = dt.datetime(2023, 10, 14),
     end_date            = dt.datetime(2023, 10, 15),
-    schedule_interval   = "@daily",
+    schedule_interval   = dt.timedelta(days=3), # run DAG every three days
 )
 
 fetch_events = BashOperator(
@@ -18,7 +19,9 @@ fetch_events = BashOperator(
     bash_command        = (
         "mkdir -p /data && "
         "curl -o /data/events.json "
-        "http://localhost:5000/events"
+        "http://localhost:5000/events?"
+        "start_date=2019-01-01&"
+        "end_date=2019-01-02"
     ),
     dag = dag
 )
